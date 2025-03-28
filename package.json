@@ -1,0 +1,16 @@
+{
+  "name": "mcp-trello-client",
+  "version": "0.1.0",
+  "description": "MCP server para interactuar con Trello como usuario PM",
+  "type": "module",
+  "main": "build/index.js",
+  "scripts": {
+    "build": "tsc && node -e \"require('fs').chmodSync('build/index.js', '755')\"",
+    "start": "node build/index.js",
+    "dev": "ts-node src/index.ts",
+    "test": "jest"
+  },
+  "keywords": ["mcp", "trello", "api"],
+  "author": "",
+  "license": "ISC"
+}
