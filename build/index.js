@@ -5,12 +5,14 @@ import { CallToolRequestSchema, ErrorCode, ListToolsRequestSchema, McpError, } f
 import { TrelloAPI } from './trello/api.js';
 const API_KEY = process.env.TRELLO_API_KEY;
 const TOKEN = process.env.TRELLO_TOKEN;
-if (!API_KEY || !TOKEN) {
-    throw new Error('TRELLO_API_KEY y TRELLO_TOKEN son requeridos');
+if (!API_KEY) {
+    throw new Error('TRELLO_API_KEY es requerida');
 }
 class TrelloServer {
     constructor() {
+        this.readOnly = !TOKEN;
         this.trello = new TrelloAPI(API_KEY, TOKEN);
+        const modeText = this.readOnly ? ' (Modo Solo Lectura)' : '';
         this.server = new Server({
             name: 'trello-client',
             version: '0.1.0',
@@ -25,13 +27,17 @@ class TrelloServer {
             await this.server.close();
             process.exit(0);
         });
+        if (this.readOnly) {
+            console.error('Iniciando en modo solo lectura - algunas operaciones no estarán disponibles');
+            console.error('Para acceso completo, proporciona TRELLO_TOKEN en la configuración');
+        }
     }
     setupToolHandlers() {
         this.server.setRequestHandler(ListToolsRequestSchema, async () => ({
             tools: [
                 {
                     name: 'list_boards',
-                    description: 'Lista todos los tableros accesibles',
+                    description: 'Lista los tableros accesibles' + (this.readOnly ? ' (públicos)' : ''),
                     inputSchema: {
                         type: 'object',
                         properties: {},
@@ -66,60 +72,62 @@ class TrelloServer {
                         required: ['listId'],
                     },
                 },
-                {
-                    name: 'move_card',
-                    description: 'Mueve una tarjeta a otra lista',
-                    inputSchema: {
-                        type: 'object',
-                        properties: {
-                            cardId: {
-                                type: 'string',
-                                description: 'ID de la tarjeta',
+                ...(!this.readOnly ? [
+                    {
+                        name: 'move_card',
+                        description: 'Mueve una tarjeta a otra lista',
+                        inputSchema: {
+                            type: 'object',
+                            properties: {
+                                cardId: {
+                                    type: 'string',
+                                    description: 'ID de la tarjeta',
+                                },
+                                listId: {
+                                    type: 'string',
+                                    description: 'ID de la lista destino',
+                                },
                             },
-                            listId: {
-                                type: 'string',
-                                description: 'ID de la lista destino',
-                            },
+                            required: ['cardId', 'listId'],
                         },
-                        required: ['cardId', 'listId'],
                     },
-                },
-                {
-                    name: 'add_comment',
-                    description: 'Agrega un comentario a una tarjeta',
-                    inputSchema: {
-                        type: 'object',
-                        properties: {
-                            cardId: {
-                                type: 'string',
-                                description: 'ID de la tarjeta',
+                    {
+                        name: 'add_comment',
+                        description: 'Agrega un comentario a una tarjeta',
+                        inputSchema: {
+                            type: 'object',
+                            properties: {
+                                cardId: {
+                                    type: 'string',
+                                    description: 'ID de la tarjeta',
+                                },
+                                text: {
+                                    type: 'string',
+                                    description: 'Texto del comentario',
+                                },
                             },
-                            text: {
-                                type: 'string',
-                                description: 'Texto del comentario',
-                            },
+                            required: ['cardId', 'text'],
                         },
-                        required: ['cardId', 'text'],
                     },
-                },
-                {
-                    name: 'assign_member',
-                    description: 'Asigna un miembro a una tarjeta',
-                    inputSchema: {
-                        type: 'object',
-                        properties: {
-                            cardId: {
-                                type: 'string',
-                                description: 'ID de la tarjeta',
+                    {
+                        name: 'assign_member',
+                        description: 'Asigna un miembro a una tarjeta',
+                        inputSchema: {
+                            type: 'object',
+                            properties: {
+                                cardId: {
+                                    type: 'string',
+                                    description: 'ID de la tarjeta',
+                                },
+                                memberId: {
+                                    type: 'string',
+                                    description: 'ID del miembro',
+                                },
                             },
-                            memberId: {
-                                type: 'string',
-                                description: 'ID del miembro',
-                            },
+                            required: ['cardId', 'memberId'],
                         },
-                        required: ['cardId', 'memberId'],
                     },
-                },
+                ] : []),
             ],
         }));
         this.server.setRequestHandler(CallToolRequestSchema, async (request) => {
@@ -169,6 +177,9 @@ class TrelloServer {
                         };
                     }
                     case 'move_card': {
+                        if (this.readOnly) {
+                            throw new McpError(ErrorCode.InvalidRequest, 'Operación no disponible en modo solo lectura');
+                        }
                         const { cardId, listId } = request.params.arguments;
                         const updatedCard = await this.trello.moveCard(cardId, listId);
                         return {
@@ -181,6 +192,9 @@ class TrelloServer {
                         };
                     }
                     case 'add_comment': {
+                        if (this.readOnly) {
+                            throw new McpError(ErrorCode.InvalidRequest, 'Operación no disponible en modo solo lectura');
+                        }
                         const { cardId, text } = request.params.arguments;
                         const comment = await this.trello.addComment(cardId, text);
                         return {
@@ -193,6 +207,9 @@ class TrelloServer {
                         };
                     }
                     case 'assign_member': {
+                        if (this.readOnly) {
+                            throw new McpError(ErrorCode.InvalidRequest, 'Operación no disponible en modo solo lectura');
+                        }
                         const { cardId, memberId } = request.params.arguments;
                         await this.trello.assignMember(cardId, memberId);
                         return {

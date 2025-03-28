@@ -11,32 +11,19 @@ import {
 
 export class TrelloAPI {
   private client: AxiosInstance;
-  private readonly readOnly: boolean;
 
-  constructor(apiKey: string, token?: string) {
-    this.readOnly = !token;
+  constructor(atlassianToken: string) {
     this.client = axios.create({
-      baseURL: 'https://api.trello.com/1',
-      params: {
-        key: apiKey,
-        ...(token ? { token } : {}),
-      },
+      baseURL: 'https://api.atlassian.com/ex/trello/1',
+      headers: {
+        'Authorization': `Bearer ${atlassianToken}`,
+        'Accept': 'application/json'
+      }
     });
   }
 
-  private checkWriteAccess() {
-    if (this.readOnly) {
-      throw new Error('Esta operación requiere un token de acceso. Actualmente el cliente está en modo solo lectura.');
-    }
-  }
-
-  // Boards - Operaciones de Lectura
+  // Boards
   async getBoards(): Promise<TrelloBoard[]> {
-    if (this.readOnly) {
-      // En modo solo lectura, obtener tableros públicos
-      const response = await this.client.get('/members/public/boards');
-      return response.data;
-    }
     const response = await this.client.get('/members/me/boards');
     return response.data;
   }
@@ -46,13 +33,13 @@ export class TrelloAPI {
     return response.data;
   }
 
-  // Lists - Operaciones de Lectura
+  // Lists
   async getBoardLists(boardId: string): Promise<TrelloList[]> {
     const response = await this.client.get(`/boards/${boardId}/lists`);
     return response.data;
   }
 
-  // Cards - Operaciones de Lectura
+  // Cards
   async getListCards(listId: string): Promise<TrelloCard[]> {
     const response = await this.client.get(`/lists/${listId}/cards`);
     return response.data;
@@ -63,18 +50,15 @@ export class TrelloAPI {
     return response.data;
   }
 
-  // Cards - Operaciones de Escritura
   async moveCard(cardId: string, listId: string): Promise<TrelloCard> {
-    this.checkWriteAccess();
     const response = await this.client.put(`/cards/${cardId}`, {
       idList: listId,
     });
     return response.data;
   }
 
-  // Comments - Requieren Token
+  // Comments
   async addComment(cardId: string, text: string): Promise<TrelloComment> {
-    this.checkWriteAccess();
     const response = await this.client.post(`/cards/${cardId}/actions/comments`, {
       text,
     });
@@ -90,16 +74,14 @@ export class TrelloAPI {
     return response.data;
   }
 
-  // Members - Operaciones Mixtas
+  // Members
   async assignMember(cardId: string, memberId: string): Promise<void> {
-    this.checkWriteAccess();
     await this.client.post(`/cards/${cardId}/idMembers`, {
       value: memberId,
     });
   }
 
   async removeMember(cardId: string, memberId: string): Promise<void> {
-    this.checkWriteAccess();
     await this.client.delete(`/cards/${cardId}/idMembers/${memberId}`);
   }
 
@@ -108,32 +90,29 @@ export class TrelloAPI {
     return response.data;
   }
 
-  // Labels - Operaciones Mixtas
+  // Labels
   async getBoardLabels(boardId: string): Promise<TrelloLabel[]> {
     const response = await this.client.get(`/boards/${boardId}/labels`);
     return response.data;
   }
 
   async addLabelToCard(cardId: string, labelId: string): Promise<void> {
-    this.checkWriteAccess();
     await this.client.post(`/cards/${cardId}/idLabels`, {
       value: labelId,
     });
   }
 
   async removeLabelFromCard(cardId: string, labelId: string): Promise<void> {
-    this.checkWriteAccess();
     await this.client.delete(`/cards/${cardId}/idLabels/${labelId}`);
   }
 
-  // Attachments - Operaciones de Escritura
+  // Attachments
   async getCardAttachments(cardId: string): Promise<TrelloAttachment[]> {
     const response = await this.client.get(`/cards/${cardId}/attachments`);
     return response.data;
   }
 
   async addAttachment(cardId: string, url: string, name?: string): Promise<TrelloAttachment> {
-    this.checkWriteAccess();
     const response = await this.client.post(`/cards/${cardId}/attachments`, {
       url,
       name,

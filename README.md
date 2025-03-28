@@ -1,6 +1,6 @@
 # MCP Trello Client
 
-Cliente MCP para interactuar con Trello como usuario PM. Este servidor proporciona herramientas para gestionar tableros, listas, tarjetas y más a través de la API de Trello.
+Cliente MCP para interactuar con Trello a través de la API de Atlassian Cloud. Este servidor proporciona herramientas para gestionar tableros, listas, tarjetas y más.
 
 ## Características
 
@@ -18,27 +18,18 @@ npm install
 npm run build
 ```
 
-## Configuración de Credenciales
+## Configuración
 
-Para usar este servidor MCP, necesitas obtener dos credenciales de Trello:
-1. API Key (Clave API)
-2. Token
+### Obtener un Token de API de Atlassian
 
-### Obtener la API Key
-
-1. Ve a [https://trello.com/app-key](https://trello.com/app-key)
-2. Inicia sesión en tu cuenta de Trello si no lo has hecho
-3. En la sección "Developer API Keys", encontrarás tu API Key personal
-
-### Obtener el Token
-
-1. Una vez que tengas tu API Key, haz clic en el enlace "Token" en la misma página
-2. Autoriza a la aplicación para acceder a tu cuenta de Trello
-3. Se te mostrará el token que puedes usar con esta aplicación
+1. Ve a [https://id.atlassian.com/manage-profile/security/api-tokens](https://id.atlassian.com/manage-profile/security/api-tokens)
+2. Haz clic en "Create API token"
+3. Nombra tu token (por ejemplo: "MCP Trello Client")
+4. Copia el token generado
 
 ### Configurar el Servidor MCP
 
-Las credenciales se deben configurar en el archivo de configuración MCP:
+El token de API de Atlassian se debe configurar en el archivo de configuración MCP:
 
 ```json
 {
@@ -47,8 +38,7 @@ Las credenciales se deben configurar en el archivo de configuración MCP:
       "command": "node",
       "args": ["path/to/build/index.js"],
       "env": {
-        "TRELLO_API_KEY": "tu-api-key",
-        "TRELLO_TOKEN": "tu-token"
+        "TRELLO_TOKEN": "tu-token-de-api-de-atlassian"
       }
     }
   }
@@ -58,7 +48,7 @@ Las credenciales se deben configurar en el archivo de configuración MCP:
 ## Herramientas Disponibles
 
 ### `list_boards`
-Lista todos los tableros a los que tiene acceso el usuario.
+Lista todos los tableros a los que tienes acceso.
 
 Ejemplo:
 ```javascript
